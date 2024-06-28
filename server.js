@@ -10,17 +10,23 @@ const io = socketIo(server, {
   },
 });
 
+let onlineUsers = [];
+
 io.on('connection', (socket) => {
   console.log('New client connected');
 
-  socket.on('join-document', (documentId) => {
-    socket.join(documentId);
-    console.log(`Client joined document ${documentId}`);
+  socket.on('login', (user) => {
+    if (!onlineUsers.some(u => u.email === user.email)) {
+      onlineUsers.push({ ...user, active: true });
+    } else {
+      onlineUsers = onlineUsers.map(u => u.email === user.email ? { ...u, active: true } : u);
+    }
+    io.emit('update-users', onlineUsers);
   });
 
-  socket.on('send-changes', (newContent) => {
-    const documentId = Object.keys(socket.rooms)[1];
-    socket.to(documentId).emit('receive-changes', newContent);
+  socket.on('logout', (user) => {
+    onlineUsers = onlineUsers.map(u => u.email === user.email ? { ...u, active: false } : u);
+    io.emit('update-users', onlineUsers);
   });
 
   socket.on('disconnect', () => {
