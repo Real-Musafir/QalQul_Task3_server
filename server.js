@@ -11,9 +11,16 @@ const io = socketIo(server, {
 });
 
 let onlineUsers = [];
+let documents = [
+  { id: 1, title: 'Document 1' },
+  { id: 2, title: 'Document 2' },
+];
 
 io.on('connection', (socket) => {
   console.log('New client connected');
+
+  // Emit current documents to the connected client
+  socket.emit('update-documents', documents);
 
   socket.on('login', (user) => {
     if (!onlineUsers.some(u => u.email === user.email)) {
@@ -27,6 +34,21 @@ io.on('connection', (socket) => {
   socket.on('logout', (user) => {
     onlineUsers = onlineUsers.map(u => u.email === user.email ? { ...u, active: false } : u);
     io.emit('update-users', onlineUsers);
+  });
+
+  socket.on('add-document', (doc) => {
+    documents.push(doc);
+    io.emit('update-documents', documents);
+  });
+
+  socket.on('update-document', (updatedDoc) => {
+    documents = documents.map(doc => doc.id === updatedDoc.id ? updatedDoc : doc);
+    io.emit('update-documents', documents);
+  });
+
+  socket.on('delete-document', (docId) => {
+    documents = documents.filter(doc => doc.id !== docId);
+    io.emit('update-documents', documents);
   });
 
   socket.on('disconnect', () => {
